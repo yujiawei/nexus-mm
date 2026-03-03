@@ -13,17 +13,19 @@ import (
 
 	"github.com/yujiawei/nexus-mm/internal/api"
 	"github.com/yujiawei/nexus-mm/internal/config"
+	"github.com/yujiawei/nexus-mm/internal/search"
 	"github.com/yujiawei/nexus-mm/internal/service"
 	"github.com/yujiawei/nexus-mm/internal/store/postgres"
 	"github.com/yujiawei/nexus-mm/internal/wkim"
 )
 
 type Server struct {
-	cfg    *config.Config
-	db     *sqlx.DB
-	redis  *redis.Client
-	http   *http.Server
-	wkHook *http.Server
+	cfg       *config.Config
+	db        *sqlx.DB
+	redis     *redis.Client
+	http      *http.Server
+	wkHook    *http.Server
+	cancelCtx context.CancelFunc
 }
 
 func New(cfg *config.Config) (*Server, error) {
@@ -49,18 +51,48 @@ func New(cfg *config.Config) (*Server, error) {
 	teamStore := postgres.NewTeamStore(db)
 	channelStore := postgres.NewChannelStore(db)
 	messageStore := postgres.NewMessageStore(db)
+	reactionStore := postgres.NewReactionStore(db)
+	pinStore := postgres.NewPinStore(db)
+	commandStore := postgres.NewSlashCommandStore(db)
+	categoryStore := postgres.NewCategoryStore(db)
+	auditStore := postgres.NewAuditStore(db)
+	webhookStore := postgres.NewWebhookStore(db)
 
 	// WuKongIM client.
 	wk := wkim.NewClient(cfg.WuKong.APIURL, cfg.WuKong.ManagerToken)
+
+	// MeiliSearch client.
+	meili := search.NewMeiliClient(cfg.MeiliSearch.URL, cfg.MeiliSearch.APIKey)
+	go func() {
+		if err := meili.EnsureIndex(context.Background()); err != nil {
+			log.Warn().Err(err).Msg("meilisearch ensure index")
+		}
+	}()
 
 	// Services.
 	userSvc := service.NewUserService(userStore, wk, cfg.JWT.Secret, cfg.JWT.ExpireHour)
 	teamSvc := service.NewTeamService(teamStore)
 	channelSvc := service.NewChannelService(channelStore, wk)
 	msgSvc := service.NewMessageService(messageStore, wk)
+	msgSvc.SetWebhookStore(webhookStore)
+	msgSvc.SetSearch(meili)
+	reactionSvc := service.NewReactionService(reactionStore)
+	pinSvc := service.NewPinService(pinStore)
+	commandSvc := service.NewSlashCommandService(commandStore)
+	categorySvc := service.NewCategoryService(categoryStore)
+	auditSvc := service.NewAuditService(auditStore)
+	retentionSvc := service.NewRetentionService(messageStore)
+
+	// Start retention service.
+	retentionCtx, retentionCancel := context.WithCancel(context.Background())
+	go retentionSvc.Start(retentionCtx)
 
 	// HTTP handlers & router.
-	handlers := api.NewHandlers(userSvc, teamSvc, channelSvc, msgSvc, db)
+	handlers := api.NewHandlers(
+		userSvc, teamSvc, channelSvc, msgSvc,
+		reactionSvc, pinSvc, commandSvc, categorySvc, auditSvc,
+		meili, db,
+	)
 	router := api.SetupRouter(handlers, cfg.JWT.Secret)
 
 	httpServer := &http.Server{
@@ -81,11 +113,12 @@ func New(cfg *config.Config) (*Server, error) {
 	}
 
 	return &Server{
-		cfg:    cfg,
-		db:     db,
-		redis:  rdb,
-		http:   httpServer,
-		wkHook: wkHookServer,
+		cfg:       cfg,
+		db:        db,
+		redis:     rdb,
+		http:      httpServer,
+		wkHook:    wkHookServer,
+		cancelCtx: retentionCancel,
 	}, nil
 }
 
@@ -104,6 +137,8 @@ func (s *Server) Start() error {
 }
 
 func (s *Server) Shutdown(ctx context.Context) error {
+	s.cancelCtx()
+
 	if err := s.http.Shutdown(ctx); err != nil {
 		return fmt.Errorf("shutdown http: %w", err)
 	}

@@ -8,6 +8,34 @@ import (
 	"github.com/yujiawei/nexus-mm/internal/service"
 )
 
+func (h *TeamHandler) SetRetention(c *gin.Context) {
+	teamID := c.Param("id")
+	userID := c.GetString("user_id")
+
+	isMember, err := h.svc.IsMember(c.Request.Context(), teamID, userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if !isMember {
+		c.JSON(http.StatusForbidden, gin.H{"error": "not a team member"})
+		return
+	}
+
+	var req model.SetRetentionRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := h.svc.SetRetention(c.Request.Context(), teamID, req.RetentionDays); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": "ok"})
+}
+
 type TeamHandler struct {
 	svc *service.TeamService
 }

@@ -80,3 +80,31 @@ func (h *ChannelHandler) Get(c *gin.Context) {
 
 	c.JSON(http.StatusOK, ch)
 }
+
+func (h *ChannelHandler) SetRetention(c *gin.Context) {
+	channelID := c.Param("id")
+	userID := c.GetString("user_id")
+
+	isMember, err := h.channelSvc.IsMember(c.Request.Context(), channelID, userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if !isMember {
+		c.JSON(http.StatusForbidden, gin.H{"error": "not a channel member"})
+		return
+	}
+
+	var req model.SetRetentionRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := h.channelSvc.SetRetention(c.Request.Context(), channelID, req.RetentionDays); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": "ok"})
+}
