@@ -47,3 +47,13 @@ type IncomingWebhookPayload struct {
 	Username string `json:"username"`
 	IconURL  string `json:"icon_url"`
 }
+
+type OutgoingWebhookPayload struct {
+	Token       string `json:"token"`
+	TeamID      string `json:"team_id"`
+	ChannelID   string `json:"channel_id"`
+	UserID      string `json:"user_id"`
+	Text        string `json:"text"`
+	TriggerWord string `json:"trigger_word"`
+	Timestamp   int64  `json:"timestamp"`
+}

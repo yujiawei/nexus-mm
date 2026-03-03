@@ -9,9 +9,10 @@ type Channel struct {
 	DisplayName string    `json:"display_name" db:"display_name"`
 	Type        string    `json:"type" db:"type"` // "open", "private", "direct"
 	Purpose     string    `json:"purpose,omitempty" db:"purpose"`
-	CreatorID   string    `json:"creator_id" db:"creator_id"`
-	CreatedAt   time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`
+	CreatorID     string    `json:"creator_id" db:"creator_id"`
+	RetentionDays int       `json:"retention_days" db:"retention_days"`
+	CreatedAt     time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at" db:"updated_at"`
 }
 
 type ChannelMember struct {

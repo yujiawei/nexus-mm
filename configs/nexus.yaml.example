@@ -23,3 +23,7 @@ wukong:
   api_url: "http://localhost:5001"
   manager_token: ""
   webhook_addr: "0.0.0.0:6979"
+
+meilisearch:
+  url: "http://localhost:7700"
+  api_key: ""

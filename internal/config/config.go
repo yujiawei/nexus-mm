@@ -8,11 +8,12 @@ import (
 )
 
 type Config struct {
-	Server   ServerConfig   `mapstructure:"server"`
-	Database DatabaseConfig `mapstructure:"database"`
-	Redis    RedisConfig    `mapstructure:"redis"`
-	JWT      JWTConfig      `mapstructure:"jwt"`
-	WuKong   WuKongConfig   `mapstructure:"wukong"`
+	Server      ServerConfig      `mapstructure:"server"`
+	Database    DatabaseConfig    `mapstructure:"database"`
+	Redis       RedisConfig       `mapstructure:"redis"`
+	JWT         JWTConfig         `mapstructure:"jwt"`
+	WuKong      WuKongConfig      `mapstructure:"wukong"`
+	MeiliSearch MeiliSearchConfig `mapstructure:"meilisearch"`
 }
 
 type ServerConfig struct {
@@ -51,6 +52,11 @@ type WuKongConfig struct {
 	WebhookAddr  string `mapstructure:"webhook_addr"`
 }
 
+type MeiliSearchConfig struct {
+	URL    string `mapstructure:"url"`
+	APIKey string `mapstructure:"api_key"`
+}
+
 func Load(path string) (*Config, error) {
 	viper.SetConfigFile(path)
 	viper.SetConfigType("yaml")
@@ -70,6 +76,8 @@ func Load(path string) (*Config, error) {
 	viper.SetDefault("wukong.api_url", "http://localhost:5001")
 	viper.SetDefault("wukong.manager_token", "")
 	viper.SetDefault("wukong.webhook_addr", "0.0.0.0:6979")
+	viper.SetDefault("meilisearch.url", "http://localhost:7700")
+	viper.SetDefault("meilisearch.api_key", "")
 
 	viper.SetEnvPrefix("NEXUS")
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))

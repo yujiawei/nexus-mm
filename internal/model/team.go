@@ -8,8 +8,13 @@ type Team struct {
 	DisplayName string    `json:"display_name" db:"display_name"`
 	Description string    `json:"description,omitempty" db:"description"`
 	CreatorID   string    `json:"creator_id" db:"creator_id"`
-	CreatedAt   time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at" db:"updated_at"`
+	RetentionDays int       `json:"retention_days" db:"retention_days"`
+	CreatedAt     time.Time `json:"created_at" db:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at" db:"updated_at"`
+}
+
+type SetRetentionRequest struct {
+	RetentionDays int `json:"retention_days"`
 }
 
 type TeamMember struct {
