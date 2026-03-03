@@ -1,0 +1,25 @@
+server:
+  host: "0.0.0.0"
+  port: 8065
+
+database:
+  host: "localhost"
+  port: 5432
+  user: "nexus"
+  password: "nexus"
+  dbname: "nexus_mm"
+  sslmode: "disable"
+
+redis:
+  addr: "localhost:6379"
+  password: ""
+  db: 0
+
+jwt:
+  secret: "change-me-in-production"
+  expire_hour: 72
+
+wukong:
+  api_url: "http://localhost:5001"
+  manager_token: ""
+  webhook_addr: "0.0.0.0:6979"
