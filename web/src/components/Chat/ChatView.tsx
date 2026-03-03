@@ -6,6 +6,7 @@ import { pinMessage, unpinMessage } from '../../api/channels';
 import MessageList from './MessageList';
 import MessageInput from './MessageInput';
 import ThreadPanel from './ThreadPanel';
+import ChannelMembersPanel from '../Team/ChannelMembersPanel';
 import SearchBar from '../Search/SearchBar';
 import SearchResults from '../Search/SearchResults';
 import Button from '../common/Button';
@@ -30,6 +31,7 @@ export default function ChatView() {
   } = useMessagesStore();
   const [notMember, setNotMember] = useState(false);
   const [joiningChannel, setJoiningChannel] = useState(false);
+  const [showMembers, setShowMembers] = useState(false);
 
   useEffect(() => {
     if (currentChannel) {
@@ -142,7 +144,18 @@ export default function ChatView() {
               </span>
             )}
           </div>
-          <SearchBar />
+          <div className="flex items-center gap-2">
+            <SearchBar />
+            <button
+              onClick={() => setShowMembers(!showMembers)}
+              className={`p-1.5 rounded transition-colors ${showMembers ? 'text-blue-600 bg-blue-50' : 'text-gray-400 hover:text-gray-600'}`}
+              title="Toggle members"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         {notMember ? (
@@ -181,6 +194,13 @@ export default function ChatView() {
           onClose={closeThread}
           onSendReply={handleSendReply}
           onToggleReaction={handleToggleReaction}
+        />
+      )}
+
+      {showMembers && currentChannel && !threadRoot && (
+        <ChannelMembersPanel
+          channel={currentChannel}
+          onClose={() => setShowMembers(false)}
         />
       )}
     </div>

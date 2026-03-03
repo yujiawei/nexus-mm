@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"time"
 
@@ -11,11 +13,12 @@ import (
 )
 
 type TeamService struct {
-	store *postgres.TeamStore
+	store      *postgres.TeamStore
+	inviteStore *postgres.InviteLinkStore
 }
 
-func NewTeamService(store *postgres.TeamStore) *TeamService {
-	return &TeamService{store: store}
+func NewTeamService(store *postgres.TeamStore, inviteStore *postgres.InviteLinkStore) *TeamService {
+	return &TeamService{store: store, inviteStore: inviteStore}
 }
 
 func (s *TeamService) Create(ctx context.Context, req *model.CreateTeamRequest, creatorID string) (*model.Team, error) {
@@ -89,4 +92,64 @@ func (s *TeamService) RemoveMember(ctx context.Context, teamID, userID string) e
 
 func (s *TeamService) GetMemberRole(ctx context.Context, teamID, userID string) (string, error) {
 	return s.store.GetMemberRole(ctx, teamID, userID)
+}
+
+func (s *TeamService) CreateInviteLink(ctx context.Context, teamID, creatorID string, req *model.CreateInviteLinkRequest) (*model.InviteLink, error) {
+	code := generateCode(8)
+	now := time.Now().UTC()
+	link := &model.InviteLink{
+		ID:        ulid.Make().String(),
+		TeamID:    teamID,
+		Code:      code,
+		CreatorID: creatorID,
+		MaxUses:   req.MaxUses,
+		UseCount:  0,
+		CreatedAt: now,
+	}
+	if req.ExpireDay > 0 {
+		exp := now.Add(time.Duration(req.ExpireDay) * 24 * time.Hour)
+		link.ExpiresAt = &exp
+	}
+	if err := s.inviteStore.Create(ctx, link); err != nil {
+		return nil, fmt.Errorf("create invite link: %w", err)
+	}
+	return link, nil
+}
+
+func (s *TeamService) JoinByCode(ctx context.Context, code, userID string) (*model.Team, error) {
+	link, err := s.inviteStore.GetByCode(ctx, code)
+	if err != nil {
+		return nil, fmt.Errorf("invalid invite code")
+	}
+	if link.ExpiresAt != nil && time.Now().After(*link.ExpiresAt) {
+		return nil, fmt.Errorf("invite link has expired")
+	}
+	if link.MaxUses > 0 && link.UseCount >= link.MaxUses {
+		return nil, fmt.Errorf("invite link has reached max uses")
+	}
+
+	team, err := s.store.GetByID(ctx, link.TeamID)
+	if err != nil {
+		return nil, fmt.Errorf("team not found")
+	}
+
+	now := time.Now().UTC()
+	member := &model.TeamMember{
+		TeamID:    link.TeamID,
+		UserID:    userID,
+		Role:      "member",
+		CreatedAt: now,
+	}
+	if err := s.store.AddMember(ctx, member); err != nil {
+		return nil, fmt.Errorf("join team: %w", err)
+	}
+
+	_ = s.inviteStore.IncrementUseCount(ctx, link.ID)
+	return team, nil
+}
+
+func generateCode(length int) string {
+	b := make([]byte, length)
+	_, _ = rand.Read(b)
+	return hex.EncodeToString(b)[:length]
 }

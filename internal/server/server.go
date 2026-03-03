@@ -58,6 +58,7 @@ func New(cfg *config.Config) (*Server, error) {
 	auditStore := postgres.NewAuditStore(db)
 	webhookStore := postgres.NewWebhookStore(db)
 	botUpdateStore := postgres.NewBotUpdateStore(db)
+	inviteLinkStore := postgres.NewInviteLinkStore(db)
 
 	// WuKongIM client.
 	wk := wkim.NewClient(cfg.WuKong.APIURL, cfg.WuKong.ManagerToken)
@@ -72,7 +73,7 @@ func New(cfg *config.Config) (*Server, error) {
 
 	// Services.
 	userSvc := service.NewUserService(userStore, wk, cfg.JWT.Secret, cfg.JWT.ExpireHour)
-	teamSvc := service.NewTeamService(teamStore)
+	teamSvc := service.NewTeamService(teamStore, inviteLinkStore)
 	channelSvc := service.NewChannelService(channelStore, wk)
 	msgSvc := service.NewMessageService(messageStore, wk)
 	msgSvc.SetWebhookStore(webhookStore)

@@ -177,3 +177,41 @@ func (h *TeamHandler) RemoveMember(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"status": "ok"})
 }
+
+func (h *TeamHandler) CreateInviteLink(c *gin.Context) {
+	teamID := c.Param("id")
+	userID := c.GetString("user_id")
+
+	isMember, err := h.svc.IsMember(c.Request.Context(), teamID, userID)
+	if err != nil || !isMember {
+		c.JSON(http.StatusForbidden, gin.H{"error": "not a team member"})
+		return
+	}
+
+	var req model.CreateInviteLinkRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		// Default: no expiry, unlimited uses.
+		req = model.CreateInviteLinkRequest{}
+	}
+
+	link, err := h.svc.CreateInviteLink(c.Request.Context(), teamID, userID, &req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, link)
+}
+
+func (h *TeamHandler) JoinByCode(c *gin.Context) {
+	code := c.Param("code")
+	userID := c.GetString("user_id")
+
+	team, err := h.svc.JoinByCode(c.Request.Context(), code, userID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, team)
+}

@@ -114,6 +114,8 @@ func SetupRouter(h *Handlers, jwtSecret string) *gin.Engine {
 	auth.GET("/teams/:id", h.Team.Get)
 	auth.PUT("/teams/:id/retention", h.Team.SetRetention)
 	auth.POST("/teams/:id/join", h.Team.JoinTeam)
+	auth.POST("/teams/:id/invite-link", h.Team.CreateInviteLink)
+	auth.POST("/teams/join-by-code/:code", h.Team.JoinByCode)
 	auth.POST("/teams/:id/members", h.Team.AddMember)
 	auth.GET("/teams/:id/members", h.Team.ListMembers)
 	auth.DELETE("/teams/:id/members/:user_id", h.Team.RemoveMember)

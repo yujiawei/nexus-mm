@@ -33,3 +33,16 @@ export async function listTeamMembers(teamId: string): Promise<TeamMember[]> {
 export async function removeTeamMember(teamId: string, userId: string): Promise<void> {
   await client.delete(`/teams/${teamId}/members/${userId}`);
 }
+
+export async function createInviteLink(teamId: string, maxUses = 0, expireDays = 0): Promise<{ code: string }> {
+  const res = await client.post(`/teams/${teamId}/invite-link`, {
+    max_uses: maxUses,
+    expire_days: expireDays,
+  });
+  return res.data;
+}
+
+export async function joinByCode(code: string): Promise<Team> {
+  const res = await client.post<Team>(`/teams/join-by-code/${code}`);
+  return res.data;
+}

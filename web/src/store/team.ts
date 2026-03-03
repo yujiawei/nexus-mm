@@ -15,6 +15,7 @@ interface TeamState {
   loadAllTeams: () => Promise<void>;
   joinTeam: (teamId: string) => Promise<void>;
   joinChannel: (channelId: string) => Promise<void>;
+  joinByCode: (code: string) => Promise<Team>;
   selectTeam: (team: Team) => Promise<void>;
   selectChannel: (channel: Channel) => void;
   loadChannels: (teamId: string) => Promise<void>;
@@ -55,6 +56,13 @@ export const useTeamStore = create<TeamState>((set, get) => ({
     if (currentTeam) {
       await get().loadChannels(currentTeam.id);
     }
+  },
+
+  joinByCode: async (code) => {
+    const team = await teamsApi.joinByCode(code);
+    const teams = await teamsApi.listTeams();
+    set({ teams: teams || [] });
+    return team;
   },
 
   loadTeams: async () => {

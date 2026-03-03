@@ -4,6 +4,7 @@ import LoginPage from './components/Auth/LoginPage';
 import RegisterPage from './components/Auth/RegisterPage';
 import Layout from './components/Layout';
 import AgentPage from './components/Agent/AgentPage';
+import InvitePage from './components/Team/InvitePage';
 import NavBar from './components/NavBar';
 import ToastContainer from './components/common/Toast';
 
@@ -20,6 +21,7 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/invite/:code" element={<InvitePage />} />
         <Route
           path="/agents"
           element={
