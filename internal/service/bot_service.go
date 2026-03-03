@@ -149,7 +149,14 @@ func (s *BotService) SendMessage(ctx context.Context, bot *model.User, req *mode
 		return nil, fmt.Errorf("check membership: %w", err)
 	}
 	if !isMember {
-		return nil, fmt.Errorf("bot is not a member of this channel")
+		// Auto-join: bots automatically join channels when they try to send
+		if err := s.channelStore.AddMember(ctx, &model.ChannelMember{
+			ChannelID: req.ChannelID,
+			UserID:    bot.ID,
+			CreatedAt: time.Now().UTC(),
+		}); err != nil {
+			return nil, fmt.Errorf("auto-join channel: %w", err)
+		}
 	}
 
 	now := time.Now().UTC()
