@@ -150,3 +150,18 @@ export interface ReactionGroup {
   user_ids: string[];
   includes_me: boolean;
 }
+
+export interface BotInfo {
+  id: string;
+  username: string;
+  nickname: string;
+  description: string;
+  webhook_url: string;
+  token: string;
+  created_at: string;
+}
+
+export interface CreateBotRequest {
+  name: string;
+  description: string;
+}

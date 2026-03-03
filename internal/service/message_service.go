@@ -17,11 +17,17 @@ import (
 	"github.com/yujiawei/nexus-mm/internal/wkim"
 )
 
+// BotDeliverer is the interface for delivering messages to bots.
+type BotDeliverer interface {
+	DeliverToBot(ctx context.Context, channelID string, msg *model.Message)
+}
+
 type MessageService struct {
 	store        *postgres.MessageStore
 	webhookStore *postgres.WebhookStore
 	wk           *wkim.Client
 	search       *search.MeiliClient
+	botDeliverer BotDeliverer
 }
 
 func NewMessageService(store *postgres.MessageStore, wk *wkim.Client) *MessageService {
@@ -36,6 +42,11 @@ func (s *MessageService) SetWebhookStore(ws *postgres.WebhookStore) {
 // SetSearch sets the MeiliSearch client for message indexing.
 func (s *MessageService) SetSearch(sc *search.MeiliClient) {
 	s.search = sc
+}
+
+// SetBotService sets the bot service for delivering messages to bots.
+func (s *MessageService) SetBotService(bd BotDeliverer) {
+	s.botDeliverer = bd
 }
 
 func (s *MessageService) Send(ctx context.Context, channelID, userID string, req *model.SendMessageRequest) (*model.Message, error) {
@@ -96,6 +107,11 @@ func (s *MessageService) Send(ctx context.Context, channelID, userID string, req
 	// Trigger outgoing webhooks (async).
 	if s.webhookStore != nil {
 		go s.triggerOutgoingWebhooks(channelID, userID, msg.Content)
+	}
+
+	// Deliver to bots in the channel (async).
+	if s.botDeliverer != nil {
+		go s.botDeliverer.DeliverToBot(context.Background(), channelID, msg)
 	}
 
 	return msg, nil

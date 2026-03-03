@@ -7,6 +7,7 @@ import (
 	v1 "github.com/yujiawei/nexus-mm/internal/api/v1"
 	"github.com/yujiawei/nexus-mm/internal/search"
 	"github.com/yujiawei/nexus-mm/internal/service"
+	"github.com/yujiawei/nexus-mm/internal/skill"
 )
 
 type Handlers struct {
@@ -21,6 +22,9 @@ type Handlers struct {
 	SlashCommand *v1.SlashCommandHandler
 	Category     *v1.CategoryHandler
 	Audit        *v1.AuditHandler
+	BotAPI       *v1.BotAPIHandler
+	Agent        *v1.AgentHandler
+	Skill        *skill.SkillHandler
 }
 
 func NewHandlers(
@@ -33,8 +37,10 @@ func NewHandlers(
 	commandSvc *service.SlashCommandService,
 	categorySvc *service.CategoryService,
 	auditSvc *service.AuditService,
+	botSvc *service.BotService,
 	meili *search.MeiliClient,
 	db *sqlx.DB,
+	baseURL string,
 ) *Handlers {
 	return &Handlers{
 		User:         v1.NewUserHandler(userSvc),
@@ -48,6 +54,9 @@ func NewHandlers(
 		SlashCommand: v1.NewSlashCommandHandler(commandSvc, teamSvc),
 		Category:     v1.NewCategoryHandler(categorySvc, teamSvc),
 		Audit:        v1.NewAuditHandler(auditSvc, userSvc),
+		BotAPI:       v1.NewBotAPIHandler(botSvc, reactionSvc),
+		Agent:        v1.NewAgentHandler(botSvc),
+		Skill:        skill.NewSkillHandler(baseURL),
 	}
 }
 
@@ -60,11 +69,26 @@ func SetupRouter(h *Handlers, jwtSecret string) *gin.Engine {
 		c.JSON(200, gin.H{"status": "ok"})
 	})
 
+	// Skill.md endpoint (public).
+	r.GET("/skill.md", h.Skill.ServeSkillMD)
+
+	// Bot API routes (token-in-URL auth, no JWT).
+	bot := r.Group("/bot/:token")
+	bot.GET("/getMe", h.BotAPI.GetMe)
+	bot.POST("/sendMessage", h.BotAPI.SendMessage)
+	bot.GET("/getUpdates", h.BotAPI.GetUpdates)
+	bot.POST("/setWebhook", h.BotAPI.SetWebhook)
+	bot.POST("/sendReaction", h.BotAPI.SendReaction)
+
 	api := r.Group("/api/v1")
 
 	// Public routes.
 	api.POST("/users/register", h.User.Register)
 	api.POST("/users/login", h.User.Login)
+
+	// Agent self-registration (public, no auth).
+	api.POST("/agents/register", h.Agent.Register)
+	api.POST("/agents/bind", h.Agent.Bind)
 
 	// Incoming webhook post endpoint (token-based auth, not JWT).
 	api.POST("/hooks/incoming/:id", h.Webhook.PostIncoming)
@@ -133,6 +157,12 @@ func SetupRouter(h *Handlers, jwtSecret string) *gin.Engine {
 	// Webhooks (create).
 	auth.POST("/hooks/incoming", h.Webhook.CreateIncoming)
 	auth.POST("/hooks/outgoing", h.Webhook.CreateOutgoing)
+
+	// Bots / Agents (authenticated).
+	auth.POST("/bots", h.Agent.CreateBot)
+	auth.GET("/bots", h.Agent.ListBots)
+	auth.POST("/bots/:id/regenerate-token", h.Agent.RegenerateToken)
+	auth.PUT("/bots/:id/webhook", h.Agent.UpdateWebhook)
 
 	// Admin.
 	auth.GET("/admin/audit", h.Audit.List)

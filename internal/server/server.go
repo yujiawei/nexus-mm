@@ -57,6 +57,7 @@ func New(cfg *config.Config) (*Server, error) {
 	categoryStore := postgres.NewCategoryStore(db)
 	auditStore := postgres.NewAuditStore(db)
 	webhookStore := postgres.NewWebhookStore(db)
+	botUpdateStore := postgres.NewBotUpdateStore(db)
 
 	// WuKongIM client.
 	wk := wkim.NewClient(cfg.WuKong.APIURL, cfg.WuKong.ManagerToken)
@@ -82,16 +83,21 @@ func New(cfg *config.Config) (*Server, error) {
 	categorySvc := service.NewCategoryService(categoryStore)
 	auditSvc := service.NewAuditService(auditStore)
 	retentionSvc := service.NewRetentionService(messageStore)
+	botSvc := service.NewBotService(userStore, botUpdateStore, teamStore, channelStore, messageStore, wk)
+
+	// Set bot service on message service for bot delivery.
+	msgSvc.SetBotService(botSvc)
 
 	// Start retention service.
 	retentionCtx, retentionCancel := context.WithCancel(context.Background())
 	go retentionSvc.Start(retentionCtx)
 
 	// HTTP handlers & router.
+	baseURL := fmt.Sprintf("http://%s:%d", cfg.Server.Host, cfg.Server.Port)
 	handlers := api.NewHandlers(
 		userSvc, teamSvc, channelSvc, msgSvc,
 		reactionSvc, pinSvc, commandSvc, categorySvc, auditSvc,
-		meili, db,
+		botSvc, meili, db, baseURL,
 	)
 	router := api.SetupRouter(handlers, cfg.JWT.Secret)
 

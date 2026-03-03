@@ -3,6 +3,7 @@ import { useAuthStore } from './store/auth';
 import LoginPage from './components/Auth/LoginPage';
 import RegisterPage from './components/Auth/RegisterPage';
 import Layout from './components/Layout';
+import AgentPage from './components/Agent/AgentPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = useAuthStore((s) => s.token);
@@ -16,6 +17,14 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route
+          path="/agents"
+          element={
+            <ProtectedRoute>
+              <AgentPage />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/*"
           element={
