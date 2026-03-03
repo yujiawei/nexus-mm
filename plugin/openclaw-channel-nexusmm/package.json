@@ -1,6 +1,6 @@
 {
   "name": "openclaw-channel-nexusmm",
-  "version": "0.5.0",
+  "version": "0.7.0",
   "description": "OpenClaw channel plugin for Nexus-MM - Bot API gateway via HTTP polling",
   "main": "index.ts",
   "type": "module",

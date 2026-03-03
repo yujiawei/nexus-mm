@@ -148,30 +148,33 @@ export const nexusmmPlugin: ChannelPlugin<ResolvedNexusmmAccount> = {
       });
 
       poller.start();
+      log?.info?.(`[${account.accountId}] poller started successfully`);
 
-      const onAbort = () => {
-        poller.stop();
-        abortController.abort();
-      };
-
-      if (ctx.abortSignal.aborted) {
-        onAbort();
-      } else {
-        ctx.abortSignal.addEventListener("abort", onAbort, { once: true });
-      }
-
-      return {
-        stop: () => {
+      // Return a Promise that never resolves (keeps the account "alive")
+      // until the abort signal fires — this is required by OpenClaw's
+      // channel gateway framework for long-running connections.
+      return new Promise<{ stop: () => void }>((resolve) => {
+        const cleanup = () => {
           poller.stop();
           abortController.abort();
-          ctx.abortSignal.removeEventListener("abort", onAbort);
           ctx.setStatus({
             accountId: account.accountId,
             running: false,
             lastStopAt: Date.now(),
           });
-        },
-      };
+        };
+
+        const onAbort = () => {
+          cleanup();
+          resolve({ stop: () => {} });
+        };
+
+        if (ctx.abortSignal.aborted) {
+          onAbort();
+        } else {
+          ctx.abortSignal.addEventListener("abort", onAbort, { once: true });
+        }
+      });
     },
   },
 };
