@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/yujiawei/nexus-mm/internal/api/middleware"
 	"github.com/yujiawei/nexus-mm/internal/model"
 	"github.com/yujiawei/nexus-mm/internal/service"
 )
@@ -23,9 +24,22 @@ func (h *UserHandler) Register(c *gin.Context) {
 		return
 	}
 
+	if !middleware.ValidateUsername(req.Username) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "username must be 3-30 chars, alphanumeric and underscore only"})
+		return
+	}
+	if !middleware.ValidateEmail(req.Email) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid email format"})
+		return
+	}
+	if !middleware.ValidatePassword(req.Password) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "password must be at least 8 characters"})
+		return
+	}
+
 	user, err := h.svc.Register(c.Request.Context(), &req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 		return
 	}
 

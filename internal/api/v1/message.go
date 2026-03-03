@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/yujiawei/nexus-mm/internal/api/middleware"
 	"github.com/yujiawei/nexus-mm/internal/model"
 	"github.com/yujiawei/nexus-mm/internal/service"
 )
@@ -36,6 +37,11 @@ func (h *MessageHandler) Send(c *gin.Context) {
 	var req model.SendMessageRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if !middleware.ValidateMessageContent(req.Content) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "message content must be 1-10000 characters"})
 		return
 	}
 

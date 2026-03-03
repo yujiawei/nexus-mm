@@ -63,6 +63,8 @@ func NewHandlers(
 func SetupRouter(h *Handlers, jwtSecret string) *gin.Engine {
 	r := gin.New()
 	r.Use(gin.Recovery())
+	r.Use(middleware.CORS())
+	r.Use(middleware.RequestLogging())
 
 	// Health check.
 	r.GET("/health", func(c *gin.Context) {
@@ -82,9 +84,11 @@ func SetupRouter(h *Handlers, jwtSecret string) *gin.Engine {
 
 	api := r.Group("/api/v1")
 
-	// Public routes.
-	api.POST("/users/register", h.User.Register)
-	api.POST("/users/login", h.User.Login)
+	// Public routes with rate limiting.
+	rateLimited := api.Group("")
+	rateLimited.Use(middleware.RateLimit(10))
+	rateLimited.POST("/users/register", h.User.Register)
+	rateLimited.POST("/users/login", h.User.Login)
 
 	// Agent self-registration (public, no auth).
 	api.POST("/agents/register", h.Agent.Register)

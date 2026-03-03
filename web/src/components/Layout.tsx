@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useAuthStore } from '../store/auth';
 import { useTeamStore } from '../store/team';
 import { useWebSocket } from '../hooks/useWebSocket';
+import NavBar from './NavBar';
 import Sidebar from './Sidebar/Sidebar';
 import ChatView from './Chat/ChatView';
 import Spinner from './common/Spinner';
@@ -32,9 +33,12 @@ export default function Layout() {
   }
 
   return (
-    <div className="h-full flex">
-      <Sidebar />
-      <ChatView />
+    <div className="h-full flex flex-col">
+      <NavBar />
+      <div className="flex-1 flex min-h-0">
+        <Sidebar />
+        <ChatView />
+      </div>
     </div>
   );
 }

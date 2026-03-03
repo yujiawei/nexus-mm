@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { useToastStore } from '../components/common/Toast';
 
 const client = axios.create({
   baseURL: import.meta.env.VITE_API_URL || '/api/v1',
@@ -21,6 +22,10 @@ client.interceptors.response.use(
       if (window.location.pathname !== '/login') {
         window.location.href = '/login';
       }
+    } else if (error.response?.status === 429) {
+      useToastStore.getState().addToast('Too many requests. Please slow down.', 'error');
+    } else if (error.response?.status >= 500) {
+      useToastStore.getState().addToast('Server error. Please try again later.', 'error');
     }
     return Promise.reject(error);
   }

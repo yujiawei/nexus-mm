@@ -1,0 +1,16 @@
+{
+  "name": "openclaw-channel-nexusmm",
+  "version": "0.1.0",
+  "description": "OpenClaw channel plugin for Nexus-MM",
+  "main": "index.js",
+  "openclaw": {
+    "extensions": {
+      "nexusmm": {
+        "type": "channel"
+      }
+    }
+  },
+  "dependencies": {
+    "axios": "^1.7.0"
+  }
+}

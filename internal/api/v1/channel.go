@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/yujiawei/nexus-mm/internal/api/middleware"
 	"github.com/yujiawei/nexus-mm/internal/model"
 	"github.com/yujiawei/nexus-mm/internal/service"
 )
@@ -37,9 +38,14 @@ func (h *ChannelHandler) Create(c *gin.Context) {
 		return
 	}
 
+	if !middleware.ValidateChannelName(req.Name) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "channel name must be 3-50 chars, lowercase alphanumeric and hyphen only"})
+		return
+	}
+
 	ch, err := h.channelSvc.Create(c.Request.Context(), teamID, &req, userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 		return
 	}
 

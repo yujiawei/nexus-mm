@@ -1,74 +1,207 @@
 # Nexus-MM
 
-> Mattermost 企业级功能 × WuKongIM 高性能消息引擎
+Enterprise collaboration platform built on [WuKongIM](https://github.com/WuKongIM/WuKongIM), inspired by Mattermost.
 
-Nexus-MM 是一个基于 WuKongIM 的企业协作平台，借鉴 Mattermost 的产品设计，提供线程讨论、全文搜索、Webhook 集成、插件系统等企业级功能。
-
-## 架构
+## Architecture
 
 ```
-┌─────────────────────────────────────────────┐
-│                 Nexus-MM                     │
-│  ┌──────────┐ ┌──────────┐ ┌──────────────┐ │
-│  │ Threads  │ │ Search   │ │ Integrations │ │
-│  │ 线程讨论  │ │ 全文搜索  │ │ Webhook/Bot  │ │
-│  └────┬─────┘ └────┬─────┘ └──────┬───────┘ │
-│       │            │              │          │
-│  ┌────┴────────────┴──────────────┴───────┐  │
-│  │          Nexus API Server (Go)         │  │
-│  │     RESTful API + WebSocket Gateway    │  │
-│  └────────────────┬───────────────────────┘  │
-│                   │                          │
-│  ┌────────────────┴───────────────────────┐  │
-│  │         WuKongIM (消息引擎)             │  │
-│  │   高性能投递 · 百万连接 · 自研协议       │  │
-│  └────────────────────────────────────────┘  │
-│                                              │
-│  ┌──────────┐ ┌──────────┐ ┌──────────────┐ │
-│  │PostgreSQL│ │  Redis   │ │    MinIO     │ │
-│  │ 业务数据  │ │  缓存     │ │  文件存储    │ │
-│  └──────────┘ └──────────┘ └──────────────┘ │
-└─────────────────────────────────────────────┘
+                        +-----------------+
+                        |   Web Frontend  |
+                        |  (React + Vite) |
+                        +--------+--------+
+                                 |
+                                 v
++-------------+         +-------+--------+         +-----------+
+|  PostgreSQL |<------->|  Nexus-MM API  |<------->| WuKongIM  |
+|             |         |   (Go + Gin)   |         | (IM Core) |
++-------------+         +-------+--------+         +-----------+
+                                 |
+                    +------------+------------+
+                    |            |             |
+               +----+----+ +----+----+ +------+------+
+               |  Redis  | |  Meili  | |  Bot API    |
+               |  Cache  | | Search  | | (Telegram-  |
+               |         | |         | |  style)     |
+               +---------+ +---------+ +-------------+
 ```
 
-## 核心功能（按优先级）
+## Features
 
-### Phase 1 - 基础框架
-- [ ] Go API Server 骨架（Gin）
-- [ ] WuKongIM 集成层（gRPC webhook + WS）
-- [ ] 用户认证（JWT + OAuth2）
-- [ ] 频道/团队 CRUD
-- [ ] 消息收发（通过 WuKongIM）
+- Team & channel management
+- Real-time messaging via WuKongIM WebSocket
+- Thread replies
+- Emoji reactions & message pinning
+- Full-text search (MeiliSearch)
+- Incoming/Outgoing Webhooks
+- Slash commands
+- Telegram-compatible Bot API with getUpdates polling & webhook delivery
+- Agent self-registration system
+- Channel categories
+- Message retention policies
+- Audit logging
+- CORS, rate limiting, request logging
+- OpenClaw channel plugin
 
-### Phase 2 - Mattermost 核心功能
-- [ ] **线程讨论** - 消息回复树
-- [ ] **全文搜索** - MeiliSearch 集成
-- [ ] **Incoming/Outgoing Webhook**
-- [ ] **Slash Commands**
-- [ ] **Reactions / Pin**
+## Quick Start
 
-### Phase 3 - 企业级
-- [ ] Plugin System (Go 插件)
-- [ ] SSO/LDAP
-- [ ] 审计日志
-- [ ] 消息保留策略
+### Prerequisites
 
-### Phase 4 - 前端
-- [ ] React Web 客户端
-- [ ] 移动端适配
+- Go 1.22+
+- Node.js 18+
+- Docker & Docker Compose
 
-## 技术栈
+### 1. Start infrastructure
 
-| 组件 | 技术 |
-|------|------|
-| API Server | Go (Gin) |
-| 消息引擎 | WuKongIM |
-| 数据库 | PostgreSQL |
-| 搜索 | MeiliSearch |
-| 缓存 | Redis |
-| 文件存储 | MinIO |
-| 前端 | React + TypeScript |
-| 部署 | Docker Compose |
+```bash
+docker compose up -d
+```
+
+This starts PostgreSQL, Redis, WuKongIM, and MeiliSearch.
+
+### 2. Run database migrations
+
+```bash
+psql -h localhost -U nexus -d nexus_mm -f migrations/001_init.sql
+```
+
+### 3. Start the API server
+
+```bash
+cp configs/nexus.yaml.example configs/nexus.yaml
+# Edit configs/nexus.yaml with your settings
+go run ./cmd/server/
+```
+
+### 4. Start the frontend (dev mode)
+
+```bash
+cd web
+npm install
+npm run dev
+```
+
+Open http://localhost:3000 in your browser.
+
+### 5. Build for production
+
+```bash
+# Backend
+go build -o nexus-mm ./cmd/server/
+
+# Frontend
+cd web && npm run build
+```
+
+## API Reference
+
+### User API
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/v1/users/register` | Register (rate limited) |
+| POST | `/api/v1/users/login` | Login, returns JWT |
+| GET | `/api/v1/users/me` | Current user info |
+
+### Team API
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/v1/teams` | Create a team |
+| GET | `/api/v1/teams` | List user's teams |
+| GET | `/api/v1/teams/all` | List all teams |
+| POST | `/api/v1/teams/:id/join` | Join a team |
+| POST | `/api/v1/teams/:id/members` | Add team member |
+| GET | `/api/v1/teams/:id/members` | List members |
+
+### Channel API
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/v1/teams/:id/channels` | Create channel |
+| GET | `/api/v1/teams/:id/channels` | List team channels |
+| POST | `/api/v1/channels/:id/join` | Join channel |
+| POST | `/api/v1/channels/:id/messages` | Send message |
+| GET | `/api/v1/channels/:id/messages` | List messages (cursor pagination) |
+| GET | `/api/v1/channels/:id/messages/:msg_id/thread` | Get thread |
+
+### Bot API (Telegram-compatible)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/bot/{token}/getMe` | Get bot info |
+| POST | `/bot/{token}/sendMessage` | Send message as bot |
+| GET | `/bot/{token}/getUpdates` | Poll for new messages |
+| POST | `/bot/{token}/setWebhook` | Set webhook URL |
+| POST | `/bot/{token}/sendReaction` | Add emoji reaction |
+
+**sendMessage Body:**
+```json
+{
+  "channel_id": "channel-ulid",
+  "content": "Hello from bot!",
+  "root_id": "optional-parent-msg-id"
+}
+```
+
+**getUpdates Response:**
+```json
+{
+  "ok": true,
+  "result": [
+    {
+      "update_id": 1,
+      "channel_id": "...",
+      "message_id": "...",
+      "user_id": "...",
+      "content": "Hello",
+      "created_at": "2026-01-01T00:00:00Z"
+    }
+  ]
+}
+```
+
+## Configuration
+
+Via `configs/nexus.yaml` or environment variables (prefix `NEXUS_`):
+
+| Key | Env Var | Default | Description |
+|-----|---------|---------|-------------|
+| `server.host` | `NEXUS_SERVER_HOST` | `0.0.0.0` | Listen host |
+| `server.port` | `NEXUS_SERVER_PORT` | `8065` | Listen port |
+| `database.host` | `NEXUS_DATABASE_HOST` | `localhost` | PostgreSQL host |
+| `database.port` | `NEXUS_DATABASE_PORT` | `5432` | PostgreSQL port |
+| `database.user` | `NEXUS_DATABASE_USER` | `nexus` | DB user |
+| `database.password` | `NEXUS_DATABASE_PASSWORD` | `nexus` | DB password |
+| `database.dbname` | `NEXUS_DATABASE_DBNAME` | `nexus_mm` | DB name |
+| `jwt.secret` | `NEXUS_JWT_SECRET` | - | JWT signing secret |
+| `jwt.expire_hour` | `NEXUS_JWT_EXPIRE_HOUR` | `72` | Token TTL hours |
+| `wukong.api_url` | `NEXUS_WUKONG_API_URL` | `http://localhost:5001` | WuKongIM API |
+| `wukong.manager_token` | `NEXUS_WUKONG_MANAGER_TOKEN` | - | WuKongIM admin token |
+| `wukong.webhook_addr` | `NEXUS_WUKONG_WEBHOOK_ADDR` | `0.0.0.0:6979` | Webhook listen addr |
+| `meilisearch.url` | `NEXUS_MEILISEARCH_URL` | `http://localhost:7700` | MeiliSearch URL |
+| `redis.addr` | `NEXUS_REDIS_ADDR` | `localhost:6379` | Redis address |
+
+## OpenClaw Plugin
+
+An OpenClaw channel plugin is included at `plugin/openclaw-channel-nexusmm/`. It connects OpenClaw to Nexus-MM's Bot API via polling.
+
+See [plugin/openclaw-channel-nexusmm/README.md](plugin/openclaw-channel-nexusmm/README.md).
+
+## Tech Stack
+
+| Component | Technology |
+|-----------|-----------|
+| API Server | Go 1.22+ (Gin) |
+| IM Engine | WuKongIM |
+| Database | PostgreSQL (sqlx) |
+| Search | MeiliSearch |
+| Cache | Redis (go-redis) |
+| Auth | JWT (golang-jwt) |
+| Config | Viper |
+| Logging | zerolog |
+| Frontend | React 18 + TypeScript + Vite |
+| State | Zustand |
+| Styling | Tailwind CSS |
 
 ## License
 
