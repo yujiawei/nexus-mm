@@ -4,9 +4,11 @@ export interface User {
   email: string;
   nickname: string;
   avatar_url?: string;
+  wk_token?: string;
   role: string;
   created_at: string;
   updated_at: string;
+  ws_url?: string;
 }
 
 export interface LoginRequest {
@@ -24,6 +26,7 @@ export interface RegisterRequest {
 export interface LoginResponse {
   token: string;
   user: User;
+  ws_url?: string;
 }
 
 export interface Team {

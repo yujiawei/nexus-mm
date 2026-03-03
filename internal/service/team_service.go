@@ -10,15 +10,18 @@ import (
 	"github.com/oklog/ulid/v2"
 	"github.com/yujiawei/nexus-mm/internal/model"
 	"github.com/yujiawei/nexus-mm/internal/store/postgres"
+	"github.com/yujiawei/nexus-mm/internal/wkim"
 )
 
 type TeamService struct {
-	store      *postgres.TeamStore
-	inviteStore *postgres.InviteLinkStore
+	store        *postgres.TeamStore
+	channelStore *postgres.ChannelStore
+	inviteStore  *postgres.InviteLinkStore
+	wk           *wkim.Client
 }
 
-func NewTeamService(store *postgres.TeamStore, inviteStore *postgres.InviteLinkStore) *TeamService {
-	return &TeamService{store: store, inviteStore: inviteStore}
+func NewTeamService(store *postgres.TeamStore, channelStore *postgres.ChannelStore, inviteStore *postgres.InviteLinkStore, wk *wkim.Client) *TeamService {
+	return &TeamService{store: store, channelStore: channelStore, inviteStore: inviteStore, wk: wk}
 }
 
 func (s *TeamService) Create(ctx context.Context, req *model.CreateTeamRequest, creatorID string) (*model.Team, error) {
@@ -79,7 +82,39 @@ func (s *TeamService) AddMember(ctx context.Context, teamID, userID, role string
 		Role:      role,
 		CreatedAt: now,
 	}
-	return s.store.AddMember(ctx, member)
+	if err := s.store.AddMember(ctx, member); err != nil {
+		return err
+	}
+	// Subscribe user to all team channels in WuKongIM.
+	s.subscribeToTeamChannels(ctx, teamID, userID)
+	return nil
+}
+
+// subscribeToTeamChannels adds the user as a subscriber + channel_member for all channels in the team.
+func (s *TeamService) subscribeToTeamChannels(ctx context.Context, teamID, userID string) {
+	channelIDs, err := s.channelStore.ListIDsByTeam(ctx, teamID)
+	if err != nil {
+		fmt.Printf("warn: list team channels for subscribe: %v\n", err)
+		return
+	}
+	now := time.Now().UTC()
+	for _, chID := range channelIDs {
+		// Add to channel_members table.
+		member := &model.ChannelMember{
+			ChannelID: chID,
+			UserID:    userID,
+			Role:      "member",
+			CreatedAt: now,
+		}
+		if err := s.channelStore.AddMember(ctx, member); err != nil {
+			// Might already be a member, skip.
+			fmt.Printf("warn: add channel member %s/%s: %v\n", chID, userID, err)
+		}
+		// Add as WuKongIM subscriber.
+		if err := s.wk.AddSubscribers(ctx, chID, wkim.ChannelTypeGroup, []string{userID}); err != nil {
+			fmt.Printf("warn: add wukongim subscriber %s/%s: %v\n", chID, userID, err)
+		}
+	}
 }
 
 func (s *TeamService) ListMembers(ctx context.Context, teamID string) ([]*model.TeamMember, error) {
@@ -133,14 +168,7 @@ func (s *TeamService) JoinByCode(ctx context.Context, code, userID string) (*mod
 		return nil, fmt.Errorf("team not found")
 	}
 
-	now := time.Now().UTC()
-	member := &model.TeamMember{
-		TeamID:    link.TeamID,
-		UserID:    userID,
-		Role:      "member",
-		CreatedAt: now,
-	}
-	if err := s.store.AddMember(ctx, member); err != nil {
+	if err := s.AddMember(ctx, link.TeamID, userID, "member"); err != nil {
 		return nil, fmt.Errorf("join team: %w", err)
 	}
 

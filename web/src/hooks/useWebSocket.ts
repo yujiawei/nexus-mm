@@ -1,63 +1,88 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef } from 'react';
+import WKSDK, { ConnectStatus } from 'wukongimjssdk';
+import type { Message } from 'wukongimjssdk';
 import { useMessagesStore } from '../store/messages';
+import { useAuthStore } from '../store/auth';
 
-const RECONNECT_DELAY = 3000;
-
-export function useWebSocket(userId: string | undefined, channelId: string | undefined) {
-  const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimer = useRef<ReturnType<typeof setTimeout>>();
+export function useWebSocket() {
+  const user = useAuthStore((s) => s.user);
+  const wkToken = useAuthStore((s) => s.wkToken);
+  const wsUrl = useAuthStore((s) => s.wsUrl);
   const addIncomingMessage = useMessagesStore((s) => s.addIncomingMessage);
-
-  const connect = useCallback(() => {
-    if (!userId) return;
-
-    const wsUrl = import.meta.env.VITE_WS_URL || `ws://${window.location.hostname}:5200`;
-    const url = `${wsUrl}/ws?uid=${userId}`;
-
-    try {
-      const ws = new WebSocket(url);
-      wsRef.current = ws;
-
-      ws.onopen = () => {
-        if (reconnectTimer.current) {
-          clearTimeout(reconnectTimer.current);
-        }
-      };
-
-      ws.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          if (data.content) {
-            const payload = typeof data.content === 'string' ? JSON.parse(data.content) : data.content;
-            if (payload.channel_id === channelId || !channelId) {
-              addIncomingMessage(payload);
-            }
-          }
-        } catch {
-          /* ignore parse errors */
-        }
-      };
-
-      ws.onclose = () => {
-        reconnectTimer.current = setTimeout(connect, RECONNECT_DELAY);
-      };
-
-      ws.onerror = () => {
-        ws.close();
-      };
-    } catch {
-      reconnectTimer.current = setTimeout(connect, RECONNECT_DELAY);
-    }
-  }, [userId, channelId, addIncomingMessage]);
+  const connectedRef = useRef(false);
 
   useEffect(() => {
-    connect();
-    return () => {
-      if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
-      if (wsRef.current) {
-        wsRef.current.onclose = null;
-        wsRef.current.close();
+    if (!user?.id || !wkToken) return;
+
+    // Derive WS address: prefer server-provided ws_url, fallback to current hostname
+    let addr = wsUrl || `ws://${window.location.hostname}:15200`;
+    // Replace localhost with actual hostname when accessed from browser
+    if (addr.includes('localhost') || addr.includes('127.0.0.1')) {
+      addr = `ws://${window.location.hostname}:15200`;
+    }
+
+    const im = WKSDK.shared();
+
+    // Disconnect any prior session
+    try { im.disconnect(); } catch { /* ignore */ }
+
+    im.config.addr = addr;
+    im.config.uid = user.id;
+    im.config.token = wkToken;
+    im.config.deviceFlag = 0;
+
+    const statusListener = (status: ConnectStatus) => {
+      switch (status) {
+        case ConnectStatus.Connected:
+          connectedRef.current = true;
+          console.log('[WS] Connected to WuKongIM');
+          break;
+        case ConnectStatus.Disconnect:
+          connectedRef.current = false;
+          console.log('[WS] Disconnected from WuKongIM');
+          break;
+        case ConnectStatus.ConnectFail:
+          connectedRef.current = false;
+          console.warn('[WS] Connection failed');
+          break;
+        case ConnectStatus.ConnectKick:
+          connectedRef.current = false;
+          console.warn('[WS] Kicked by server');
+          break;
       }
     };
-  }, [connect]);
+
+    const messageListener = (message: Message) => {
+      const content = message.content;
+      const contentObj = content?.contentObj as Record<string, unknown> | undefined;
+      if (!contentObj) return;
+
+      // Build a Message object compatible with our store
+      const msg = {
+        id: contentObj.id as string || String(message.messageID),
+        channel_id: contentObj.channel_id as string || message.channel?.channelID || '',
+        user_id: contentObj.user_id as string || message.fromUID || '',
+        content: contentObj.content as string || content?.conversationDigest || '',
+        type: (contentObj.type as string) || 'text',
+        root_id: (contentObj.root_id as string) || undefined,
+        reply_count: (contentObj.reply_count as number) || 0,
+        created_at: (contentObj.created_at as string) || new Date().toISOString(),
+        updated_at: (contentObj.updated_at as string) || new Date().toISOString(),
+        user: contentObj.user as Record<string, unknown> | undefined,
+      };
+
+      addIncomingMessage(msg as Parameters<typeof addIncomingMessage>[0]);
+    };
+
+    im.connectManager.addConnectStatusListener(statusListener);
+    im.chatManager.addMessageListener(messageListener);
+    im.connect();
+
+    return () => {
+      connectedRef.current = false;
+      im.connectManager.removeConnectStatusListener(statusListener);
+      im.chatManager.removeMessageListener(messageListener);
+      try { im.disconnect(); } catch { /* ignore */ }
+    };
+  }, [user?.id, wkToken, wsUrl, addIncomingMessage]);
 }

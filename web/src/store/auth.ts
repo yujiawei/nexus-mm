@@ -5,6 +5,8 @@ import * as usersApi from '../api/users';
 interface AuthState {
   user: User | null;
   token: string | null;
+  wkToken: string | null;
+  wsUrl: string | null;
   loading: boolean;
   error: string | null;
   login: (username: string, password: string) => Promise<void>;
@@ -17,6 +19,8 @@ interface AuthState {
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   token: localStorage.getItem('token'),
+  wkToken: null,
+  wsUrl: null,
   loading: false,
   error: null,
 
@@ -25,7 +29,13 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       const res = await usersApi.login({ username, password });
       localStorage.setItem('token', res.token);
-      set({ user: res.user, token: res.token, loading: false });
+      set({
+        user: res.user,
+        token: res.token,
+        wkToken: res.user.wk_token || null,
+        wsUrl: res.ws_url || null,
+        loading: false,
+      });
     } catch (err: unknown) {
       const message = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || 'Login failed';
       set({ error: message, loading: false });
@@ -38,7 +48,13 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       const res = await usersApi.register({ username, email, password, nickname });
       localStorage.setItem('token', res.token);
-      set({ user: res.user, token: res.token, loading: false });
+      set({
+        user: res.user,
+        token: res.token,
+        wkToken: res.user.wk_token || null,
+        wsUrl: res.ws_url || null,
+        loading: false,
+      });
     } catch (err: unknown) {
       const message = (err as { response?: { data?: { error?: string } } })?.response?.data?.error || 'Registration failed';
       set({ error: message, loading: false });
@@ -48,7 +64,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   logout: () => {
     localStorage.removeItem('token');
-    set({ user: null, token: null });
+    set({ user: null, token: null, wkToken: null, wsUrl: null });
   },
 
   loadUser: async () => {
@@ -57,10 +73,16 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ loading: true });
     try {
       const user = await usersApi.getMe();
-      set({ user, token, loading: false });
+      set({
+        user,
+        token,
+        wkToken: user.wk_token || null,
+        wsUrl: user.ws_url || null,
+        loading: false,
+      });
     } catch {
       localStorage.removeItem('token');
-      set({ user: null, token: null, loading: false });
+      set({ user: null, token: null, wkToken: null, wsUrl: null, loading: false });
     }
   },
 

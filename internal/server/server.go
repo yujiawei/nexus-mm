@@ -72,8 +72,8 @@ func New(cfg *config.Config) (*Server, error) {
 	}()
 
 	// Services.
-	userSvc := service.NewUserService(userStore, wk, cfg.JWT.Secret, cfg.JWT.ExpireHour)
-	teamSvc := service.NewTeamService(teamStore, inviteLinkStore)
+	userSvc := service.NewUserService(userStore, wk, cfg.JWT.Secret, cfg.JWT.ExpireHour, cfg.WuKong.WsURL)
+	teamSvc := service.NewTeamService(teamStore, channelStore, inviteLinkStore, wk)
 	channelSvc := service.NewChannelService(channelStore, wk)
 	msgSvc := service.NewMessageService(messageStore, wk)
 	msgSvc.SetWebhookStore(webhookStore)

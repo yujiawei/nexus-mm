@@ -50,6 +50,7 @@ type WuKongConfig struct {
 	APIURL       string `mapstructure:"api_url"`
 	ManagerToken string `mapstructure:"manager_token"`
 	WebhookAddr  string `mapstructure:"webhook_addr"`
+	WsURL        string `mapstructure:"ws_url"`
 }
 
 type MeiliSearchConfig struct {
@@ -76,6 +77,7 @@ func Load(path string) (*Config, error) {
 	viper.SetDefault("wukong.api_url", "http://localhost:5001")
 	viper.SetDefault("wukong.manager_token", "")
 	viper.SetDefault("wukong.webhook_addr", "0.0.0.0:6979")
+	viper.SetDefault("wukong.ws_url", "ws://localhost:15200")
 	viper.SetDefault("meilisearch.url", "http://localhost:7700")
 	viper.SetDefault("meilisearch.api_key", "")
 

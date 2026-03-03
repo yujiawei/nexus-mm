@@ -37,13 +37,13 @@ func (h *UserHandler) Register(c *gin.Context) {
 		return
 	}
 
-	user, err := h.svc.Register(c.Request.Context(), &req)
+	resp, err := h.svc.Register(c.Request.Context(), &req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 		return
 	}
 
-	c.JSON(http.StatusCreated, user)
+	c.JSON(http.StatusCreated, resp)
 }
 
 func (h *UserHandler) Login(c *gin.Context) {
@@ -70,7 +70,19 @@ func (h *UserHandler) Me(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, user)
+	c.JSON(http.StatusOK, gin.H{
+		"id":         user.ID,
+		"username":   user.Username,
+		"email":      user.Email,
+		"nickname":   user.Nickname,
+		"avatar_url": user.AvatarURL,
+		"wk_token":   user.WkToken,
+		"role":       user.Role,
+		"is_bot":     user.IsBot,
+		"created_at": user.CreatedAt,
+		"updated_at": user.UpdatedAt,
+		"ws_url":     h.svc.WsURL(),
+	})
 }
 
 func (h *UserHandler) UpdateRole(c *gin.Context) {

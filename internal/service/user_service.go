@@ -22,18 +22,20 @@ type UserService struct {
 	wk         *wkim.Client
 	jwtSecret  []byte
 	jwtExpireH int
+	wsURL      string
 }
 
-func NewUserService(store *postgres.UserStore, wk *wkim.Client, jwtSecret string, jwtExpireH int) *UserService {
+func NewUserService(store *postgres.UserStore, wk *wkim.Client, jwtSecret string, jwtExpireH int, wsURL string) *UserService {
 	return &UserService{
 		store:      store,
 		wk:         wk,
 		jwtSecret:  []byte(jwtSecret),
 		jwtExpireH: jwtExpireH,
+		wsURL:      wsURL,
 	}
 }
 
-func (s *UserService) Register(ctx context.Context, req *model.UserRegister) (*model.User, error) {
+func (s *UserService) Register(ctx context.Context, req *model.UserRegister) (*model.LoginResponse, error) {
 	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, fmt.Errorf("hash password: %w", err)
@@ -46,6 +48,8 @@ func (s *UserService) Register(ctx context.Context, req *model.UserRegister) (*m
 		role = "admin"
 	}
 
+	wkToken := randomHex(16)
+
 	now := time.Now().UTC()
 	user := &model.User{
 		ID:           ulid.Make().String(),
@@ -53,6 +57,7 @@ func (s *UserService) Register(ctx context.Context, req *model.UserRegister) (*m
 		Email:        req.Email,
 		PasswordHash: string(hash),
 		Nickname:     req.Nickname,
+		WkToken:      wkToken,
 		Role:         role,
 		CreatedAt:    now,
 		UpdatedAt:    now,
@@ -62,14 +67,18 @@ func (s *UserService) Register(ctx context.Context, req *model.UserRegister) (*m
 		return nil, fmt.Errorf("create user: %w", err)
 	}
 
-	// Register user in WuKongIM with a random token.
-	wkToken := randomHex(16)
+	// Register user in WuKongIM.
 	if err := s.wk.RegisterUser(ctx, user.ID, wkToken); err != nil {
 		// Log but don't fail registration - WuKongIM might be down.
 		fmt.Printf("warn: register user in wukongim: %v\n", err)
 	}
 
-	return user, nil
+	token, err := s.generateToken(user.ID)
+	if err != nil {
+		return nil, fmt.Errorf("generate token: %w", err)
+	}
+
+	return &model.LoginResponse{Token: token, User: user, WsURL: s.wsURL}, nil
 }
 
 func (s *UserService) Login(ctx context.Context, req *model.UserLogin) (*model.LoginResponse, error) {
@@ -87,11 +96,15 @@ func (s *UserService) Login(ctx context.Context, req *model.UserLogin) (*model.L
 		return nil, fmt.Errorf("generate token: %w", err)
 	}
 
-	return &model.LoginResponse{Token: token, User: user}, nil
+	return &model.LoginResponse{Token: token, User: user, WsURL: s.wsURL}, nil
 }
 
 func (s *UserService) GetByID(ctx context.Context, id string) (*model.User, error) {
 	return s.store.GetByID(ctx, id)
+}
+
+func (s *UserService) WsURL() string {
+	return s.wsURL
 }
 
 func (s *UserService) UpdateRole(ctx context.Context, userID, role string) error {

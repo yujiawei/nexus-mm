@@ -17,12 +17,12 @@ func NewUserStore(db *sqlx.DB) *UserStore {
 }
 
 func (s *UserStore) Create(ctx context.Context, user *model.User) error {
-	query := `INSERT INTO users (id, username, email, password_hash, nickname, avatar_url, role,
+	query := `INSERT INTO users (id, username, email, password_hash, nickname, avatar_url, wk_token, role,
 		is_bot, bot_token, bot_owner_id, bot_description, bot_webhook_url, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`
 	_, err := s.db.ExecContext(ctx, query,
 		user.ID, user.Username, user.Email, user.PasswordHash,
-		user.Nickname, user.AvatarURL, user.Role,
+		user.Nickname, user.AvatarURL, user.WkToken, user.Role,
 		user.IsBot, user.BotToken, user.BotOwnerID, user.BotDescription, user.BotWebhookURL,
 		user.CreatedAt, user.UpdatedAt)
 	return err

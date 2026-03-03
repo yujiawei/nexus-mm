@@ -9,6 +9,7 @@ type User struct {
 	PasswordHash   string    `json:"-" db:"password_hash"`
 	Nickname       string    `json:"nickname" db:"nickname"`
 	AvatarURL      string    `json:"avatar_url,omitempty" db:"avatar_url"`
+	WkToken        string    `json:"wk_token,omitempty" db:"wk_token"`
 	Role           string    `json:"role" db:"role"` // "admin", "member"
 	IsBot          bool      `json:"is_bot" db:"is_bot"`
 	BotToken       *string   `json:"bot_token,omitempty" db:"bot_token"`
@@ -34,6 +35,7 @@ type UserRegister struct {
 type LoginResponse struct {
 	Token string `json:"token"`
 	User  *User  `json:"user"`
+	WsURL string `json:"ws_url,omitempty"`
 }
 
 type BotRegisterRequest struct {

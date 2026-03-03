@@ -11,7 +11,7 @@ import Spinner from './common/Spinner';
 
 export default function Layout() {
   const { user, loadUser, loading: authLoading } = useAuthStore();
-  const { teams, currentChannel, loadTeams, loading: teamLoading } = useTeamStore();
+  const { teams, loadTeams, loading: teamLoading } = useTeamStore();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -30,7 +30,7 @@ export default function Layout() {
     }
   }, [user, loadTeams, navigate]);
 
-  useWebSocket(user?.id, currentChannel?.id);
+  useWebSocket();
 
   if (authLoading || teamLoading) {
     return (
