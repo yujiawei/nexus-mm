@@ -59,3 +59,7 @@ func (s *TeamService) List(ctx context.Context, userID string) ([]*model.Team, e
 func (s *TeamService) IsMember(ctx context.Context, teamID, userID string) (bool, error) {
 	return s.store.IsMember(ctx, teamID, userID)
 }
+
+func (s *TeamService) SetRetention(ctx context.Context, teamID string, days int) error {
+	return s.store.SetRetention(ctx, teamID, days)
+}

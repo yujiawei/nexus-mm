@@ -72,3 +72,11 @@ func (s *ChannelService) IsMember(ctx context.Context, channelID, userID string)
 func (s *ChannelService) GetMembers(ctx context.Context, channelID string) ([]string, error) {
 	return s.store.GetMembers(ctx, channelID)
 }
+
+func (s *ChannelService) SetRetention(ctx context.Context, channelID string, days int) error {
+	return s.store.SetRetention(ctx, channelID, days)
+}
+
+func (s *ChannelService) ListIDsByTeam(ctx context.Context, teamID string) ([]string, error) {
+	return s.store.ListIDsByTeam(ctx, teamID)
+}
