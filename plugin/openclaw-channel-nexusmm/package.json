@@ -1,16 +1,46 @@
 {
   "name": "openclaw-channel-nexusmm",
-  "version": "0.1.0",
-  "description": "OpenClaw channel plugin for Nexus-MM",
-  "main": "index.js",
-  "openclaw": {
-    "extensions": {
-      "nexusmm": {
-        "type": "channel"
-      }
-    }
+  "version": "0.5.0",
+  "description": "OpenClaw channel plugin for Nexus-MM - Bot API gateway via HTTP polling",
+  "main": "index.ts",
+  "type": "module",
+  "files": [
+    "index.ts",
+    "src",
+    "openclaw.plugin.json"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "type-check": "tsc --noEmit"
   },
+  "author": "yujiawei",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yujiawei/nexus-mm"
+  },
+  "keywords": ["openclaw", "channel", "nexus-mm", "mattermost", "wukongim", "bot"],
   "dependencies": {
-    "axios": "^1.7.0"
+    "zod": "^4.0.0"
+  },
+  "peerDependencies": {
+    "openclaw": ">=2026.2.0"
+  },
+  "devDependencies": {
+    "openclaw": "2026.2.12",
+    "typescript": "^5.4.0"
+  },
+  "openclaw": {
+    "extensions": [
+      "./index.ts"
+    ],
+    "channel": {
+      "id": "nexusmm",
+      "label": "Nexus-MM",
+      "selectionLabel": "Nexus-MM (Bot API)",
+      "docsLabel": "nexusmm",
+      "blurb": "Bot API gateway for Nexus-MM collaboration platform",
+      "order": 95
+    }
   }
 }

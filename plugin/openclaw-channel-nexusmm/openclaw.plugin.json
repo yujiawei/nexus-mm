@@ -1,0 +1,9 @@
+{
+  "id": "nexusmm",
+  "channels": ["nexusmm"],
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {}
+  }
+}

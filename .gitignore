@@ -7,3 +7,4 @@ configs/nexus.yaml
 vendor/
 web/node_modules/
 web/dist/
+plugin/*/node_modules/
