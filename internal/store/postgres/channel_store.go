@@ -66,3 +66,16 @@ func (s *ChannelStore) GetMembers(ctx context.Context, channelID string) ([]stri
 		"SELECT user_id FROM channel_members WHERE channel_id = $1", channelID)
 	return userIDs, err
 }
+
+func (s *ChannelStore) SetRetention(ctx context.Context, channelID string, days int) error {
+	_, err := s.db.ExecContext(ctx,
+		"UPDATE channels SET retention_days = $1, updated_at = NOW() WHERE id = $2", days, channelID)
+	return err
+}
+
+func (s *ChannelStore) ListIDsByTeam(ctx context.Context, teamID string) ([]string, error) {
+	var ids []string
+	err := s.db.SelectContext(ctx, &ids,
+		"SELECT id FROM channels WHERE team_id = $1", teamID)
+	return ids, err
+}

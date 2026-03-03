@@ -59,3 +59,9 @@ func (s *TeamStore) IsMember(ctx context.Context, teamID, userID string) (bool, 
 		teamID, userID)
 	return count > 0, err
 }
+
+func (s *TeamStore) SetRetention(ctx context.Context, teamID string, days int) error {
+	_, err := s.db.ExecContext(ctx,
+		"UPDATE teams SET retention_days = $1, updated_at = NOW() WHERE id = $2", days, teamID)
+	return err
+}
