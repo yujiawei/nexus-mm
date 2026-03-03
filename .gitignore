@@ -5,3 +5,5 @@ bin/
 configs/nexus.yaml
 .env
 vendor/
+web/node_modules/
+web/dist/
