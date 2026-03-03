@@ -5,10 +5,10 @@ services:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: nexus
-      POSTGRES_PASSWORD: nexus
+      POSTGRES_PASSWORD: nexus_mm_2026
       POSTGRES_DB: nexus_mm
     ports:
-      - "5432:5432"
+      - "15432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./migrations:/docker-entrypoint-initdb.d
@@ -21,7 +21,7 @@ services:
   redis:
     image: redis:7-alpine
     ports:
-      - "6379:6379"
+      - "16379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -29,12 +29,12 @@ services:
       retries: 5
 
   wukongim:
-    image: registry.cn-shanghai.aliyuncs.com/wukongim/wukongim:v2.1
+    image: wukongim/wukongim:v2
     ports:
-      - "5001:5001"  # API
-      - "5100:5100"  # TCP
-      - "5200:5200"  # WebSocket
-      - "5300:5300"  # Manager
+      - "15001:5001"
+      - "15100:5100"
+      - "15200:5200"
+      - "15300:5300"
     environment:
       WK_MODE: debug
     volumes:
@@ -43,7 +43,7 @@ services:
   meilisearch:
     image: getmeili/meilisearch:v1.6
     ports:
-      - "7700:7700"
+      - "17700:7700"
     environment:
       MEILI_ENV: development
     volumes:

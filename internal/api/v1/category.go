@@ -18,7 +18,7 @@ func NewCategoryHandler(categorySvc *service.CategoryService, teamSvc *service.T
 }
 
 func (h *CategoryHandler) Create(c *gin.Context) {
-	teamID := c.Param("team_id")
+	teamID := c.Param("id")
 	userID := c.GetString("user_id")
 
 	isMember, err := h.teamSvc.IsMember(c.Request.Context(), teamID, userID)
@@ -47,7 +47,7 @@ func (h *CategoryHandler) Create(c *gin.Context) {
 }
 
 func (h *CategoryHandler) List(c *gin.Context) {
-	teamID := c.Param("team_id")
+	teamID := c.Param("id")
 	userID := c.GetString("user_id")
 
 	isMember, err := h.teamSvc.IsMember(c.Request.Context(), teamID, userID)

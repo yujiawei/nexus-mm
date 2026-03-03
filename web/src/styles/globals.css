@@ -11,6 +11,11 @@
     @apply h-full;
   }
 
+  input, textarea, select {
+    @apply text-gray-900;
+  }
+
+
   ::-webkit-scrollbar {
     width: 6px;
   }
