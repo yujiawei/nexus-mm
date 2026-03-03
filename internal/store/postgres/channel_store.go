@@ -79,3 +79,16 @@ func (s *ChannelStore) ListIDsByTeam(ctx context.Context, teamID string) ([]stri
 		"SELECT id FROM channels WHERE team_id = $1", teamID)
 	return ids, err
 }
+
+func (s *ChannelStore) ListMembers(ctx context.Context, channelID string) ([]*model.ChannelMember, error) {
+	var members []*model.ChannelMember
+	err := s.db.SelectContext(ctx, &members,
+		"SELECT * FROM channel_members WHERE channel_id = $1 ORDER BY created_at ASC", channelID)
+	return members, err
+}
+
+func (s *ChannelStore) RemoveMember(ctx context.Context, channelID, userID string) error {
+	_, err := s.db.ExecContext(ctx,
+		"DELETE FROM channel_members WHERE channel_id = $1 AND user_id = $2", channelID, userID)
+	return err
+}

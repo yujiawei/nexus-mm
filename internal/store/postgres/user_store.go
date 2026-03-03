@@ -51,3 +51,15 @@ func (s *UserStore) GetByEmail(ctx context.Context, email string) (*model.User, 
 	}
 	return &user, nil
 }
+
+func (s *UserStore) Count(ctx context.Context) (int, error) {
+	var count int
+	err := s.db.GetContext(ctx, &count, "SELECT COUNT(*) FROM users")
+	return count, err
+}
+
+func (s *UserStore) UpdateRole(ctx context.Context, userID, role string) error {
+	_, err := s.db.ExecContext(ctx,
+		"UPDATE users SET role = $1, updated_at = NOW() WHERE id = $2", role, userID)
+	return err
+}

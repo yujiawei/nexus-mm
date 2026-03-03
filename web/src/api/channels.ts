@@ -1,6 +1,7 @@
 import client from './client';
 import type {
   Channel,
+  ChannelMember,
   CreateChannelRequest,
   ChannelCategory,
   CreateCategoryRequest,
@@ -52,4 +53,17 @@ export async function pinMessage(channelId: string, messageId: string): Promise<
 
 export async function unpinMessage(channelId: string, messageId: string): Promise<void> {
   await client.delete(`/channels/${channelId}/messages/${messageId}/pin`);
+}
+
+export async function joinChannel(channelId: string): Promise<void> {
+  await client.post(`/channels/${channelId}/join`);
+}
+
+export async function listChannelMembers(channelId: string): Promise<ChannelMember[]> {
+  const res = await client.get<ChannelMember[]>(`/channels/${channelId}/members`);
+  return res.data;
+}
+
+export async function removeChannelMember(channelId: string, userId: string): Promise<void> {
+  await client.delete(`/channels/${channelId}/members/${userId}`);
 }

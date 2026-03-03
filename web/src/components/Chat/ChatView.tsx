@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import { useTeamStore } from '../../store/team';
 import { useMessagesStore } from '../../store/messages';
 import { useAuthStore } from '../../store/auth';
@@ -8,10 +8,11 @@ import MessageInput from './MessageInput';
 import ThreadPanel from './ThreadPanel';
 import SearchBar from '../Search/SearchBar';
 import SearchResults from '../Search/SearchResults';
+import Button from '../common/Button';
 import type { Message } from '../../api/types';
 
 export default function ChatView() {
-  const { currentChannel } = useTeamStore();
+  const { currentChannel, joinChannel } = useTeamStore();
   const { user } = useAuthStore();
   const {
     messages,
@@ -27,13 +28,34 @@ export default function ChatView() {
     closeThread,
     toggleReaction,
   } = useMessagesStore();
+  const [notMember, setNotMember] = useState(false);
+  const [joiningChannel, setJoiningChannel] = useState(false);
 
   useEffect(() => {
     if (currentChannel) {
-      loadMessages(currentChannel.id);
+      setNotMember(false);
+      loadMessages(currentChannel.id).catch((err) => {
+        if (err?.response?.status === 403) {
+          setNotMember(true);
+        }
+      });
       closeThread();
     }
   }, [currentChannel, loadMessages, closeThread]);
+
+  const handleJoinChannel = useCallback(async () => {
+    if (!currentChannel) return;
+    setJoiningChannel(true);
+    try {
+      await joinChannel(currentChannel.id);
+      setNotMember(false);
+      await loadMessages(currentChannel.id);
+    } catch {
+      /* ignore */
+    } finally {
+      setJoiningChannel(false);
+    }
+  }, [currentChannel, joinChannel, loadMessages]);
 
   const handleSend = useCallback(
     (content: string) => {
@@ -123,7 +145,16 @@ export default function ChatView() {
           <SearchBar />
         </div>
 
-        {searchQuery ? (
+        {notMember ? (
+          <div className="flex-1 flex items-center justify-center bg-gray-50">
+            <div className="text-center">
+              <p className="text-gray-500 mb-4">You are not a member of this channel.</p>
+              <Button onClick={handleJoinChannel} loading={joiningChannel}>
+                Join #{currentChannel.display_name}
+              </Button>
+            </div>
+          </div>
+        ) : searchQuery ? (
           <SearchResults />
         ) : (
           <>

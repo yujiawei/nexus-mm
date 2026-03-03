@@ -57,8 +57,9 @@ export const useMessagesStore = create<MessagesState>((set, get) => ({
     try {
       const messages = await messagesApi.listMessages(channelId, { limit: 50 });
       set({ messages: (messages || []).reverse(), loading: false, hasMore: (messages || []).length >= 50 });
-    } catch {
+    } catch (err) {
       set({ loading: false, messages: [] });
+      throw err;
     }
   },
 

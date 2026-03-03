@@ -80,3 +80,36 @@ func (s *ChannelService) SetRetention(ctx context.Context, channelID string, day
 func (s *ChannelService) ListIDsByTeam(ctx context.Context, teamID string) ([]string, error) {
 	return s.store.ListIDsByTeam(ctx, teamID)
 }
+
+func (s *ChannelService) AddMember(ctx context.Context, channelID, userID, role string) error {
+	now := time.Now().UTC()
+	member := &model.ChannelMember{
+		ChannelID: channelID,
+		UserID:    userID,
+		Role:      role,
+		CreatedAt: now,
+	}
+	if err := s.store.AddMember(ctx, member); err != nil {
+		return fmt.Errorf("add channel member: %w", err)
+	}
+	// Also add as subscriber in WuKongIM.
+	if err := s.wk.AddSubscribers(ctx, channelID, wkim.ChannelTypeGroup, []string{userID}); err != nil {
+		fmt.Printf("warn: add wukongim subscriber: %v\n", err)
+	}
+	return nil
+}
+
+func (s *ChannelService) ListMembers(ctx context.Context, channelID string) ([]*model.ChannelMember, error) {
+	return s.store.ListMembers(ctx, channelID)
+}
+
+func (s *ChannelService) RemoveMember(ctx context.Context, channelID, userID string) error {
+	if err := s.store.RemoveMember(ctx, channelID, userID); err != nil {
+		return fmt.Errorf("remove channel member: %w", err)
+	}
+	// Also remove subscriber from WuKongIM.
+	if err := s.wk.RemoveSubscribers(ctx, channelID, wkim.ChannelTypeGroup, []string{userID}); err != nil {
+		fmt.Printf("warn: remove wukongim subscriber: %v\n", err)
+	}
+	return nil
+}

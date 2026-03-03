@@ -65,3 +65,29 @@ func (s *TeamStore) SetRetention(ctx context.Context, teamID string, days int) e
 		"UPDATE teams SET retention_days = $1, updated_at = NOW() WHERE id = $2", days, teamID)
 	return err
 }
+
+func (s *TeamStore) ListAll(ctx context.Context) ([]*model.Team, error) {
+	var teams []*model.Team
+	err := s.db.SelectContext(ctx, &teams, "SELECT * FROM teams ORDER BY created_at DESC")
+	return teams, err
+}
+
+func (s *TeamStore) ListMembers(ctx context.Context, teamID string) ([]*model.TeamMember, error) {
+	var members []*model.TeamMember
+	err := s.db.SelectContext(ctx, &members,
+		"SELECT * FROM team_members WHERE team_id = $1 ORDER BY created_at ASC", teamID)
+	return members, err
+}
+
+func (s *TeamStore) RemoveMember(ctx context.Context, teamID, userID string) error {
+	_, err := s.db.ExecContext(ctx,
+		"DELETE FROM team_members WHERE team_id = $1 AND user_id = $2", teamID, userID)
+	return err
+}
+
+func (s *TeamStore) GetMemberRole(ctx context.Context, teamID, userID string) (string, error) {
+	var role string
+	err := s.db.GetContext(ctx, &role,
+		"SELECT role FROM team_members WHERE team_id = $1 AND user_id = $2", teamID, userID)
+	return role, err
+}

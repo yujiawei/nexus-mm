@@ -1,14 +1,20 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTeamStore } from '../../store/team';
 import Modal from '../common/Modal';
 import Button from '../common/Button';
 
 export default function TeamSwitcher() {
-  const { teams, currentTeam, selectTeam, createTeam } = useTeamStore();
-  const [showModal, setShowModal] = useState(false);
+  const { teams, allTeams, currentTeam, selectTeam, createTeam, loadAllTeams, joinTeam } = useTeamStore();
+  const [showCreate, setShowCreate] = useState(false);
+  const [showBrowse, setShowBrowse] = useState(false);
   const [name, setName] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [creating, setCreating] = useState(false);
+  const [joining, setJoining] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (showBrowse) loadAllTeams();
+  }, [showBrowse, loadAllTeams]);
 
   const handleCreate = async () => {
     if (!name.trim() || !displayName.trim()) return;
@@ -16,13 +22,28 @@ export default function TeamSwitcher() {
     try {
       const team = await createTeam(name.trim(), displayName.trim());
       await selectTeam(team);
-      setShowModal(false);
+      setShowCreate(false);
       setName('');
       setDisplayName('');
     } finally {
       setCreating(false);
     }
   };
+
+  const handleJoin = async (teamId: string) => {
+    setJoining(teamId);
+    try {
+      await joinTeam(teamId);
+      const joined = allTeams.find((t) => t.id === teamId);
+      if (joined) await selectTeam(joined);
+      setShowBrowse(false);
+    } finally {
+      setJoining(null);
+    }
+  };
+
+  const myTeamIds = new Set(teams.map((t) => t.id));
+  const joinableTeams = allTeams.filter((t) => !myTeamIds.has(t.id));
 
   return (
     <>
@@ -42,7 +63,16 @@ export default function TeamSwitcher() {
           </button>
         ))}
         <button
-          onClick={() => setShowModal(true)}
+          onClick={() => setShowBrowse(true)}
+          className="w-10 h-10 rounded-lg flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
+          title="Browse teams"
+        >
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </button>
+        <button
+          onClick={() => setShowCreate(true)}
           className="w-10 h-10 rounded-lg flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-700 transition-colors border-2 border-dashed border-slate-600"
           title="Create team"
         >
@@ -52,7 +82,30 @@ export default function TeamSwitcher() {
         </button>
       </div>
 
-      <Modal open={showModal} onClose={() => setShowModal(false)} title="Create a Team">
+      <Modal open={showBrowse} onClose={() => setShowBrowse(false)} title="Browse Teams">
+        <div className="space-y-2 max-h-80 overflow-y-auto">
+          {joinableTeams.length === 0 && (
+            <p className="text-sm text-gray-500 text-center py-4">No teams available to join</p>
+          )}
+          {joinableTeams.map((team) => (
+            <div key={team.id} className="flex items-center justify-between p-3 rounded-lg bg-gray-50 hover:bg-gray-100">
+              <div>
+                <p className="font-medium text-sm">{team.display_name}</p>
+                <p className="text-xs text-gray-500">{team.name}</p>
+              </div>
+              <Button
+                size="sm"
+                onClick={() => handleJoin(team.id)}
+                loading={joining === team.id}
+              >
+                Join
+              </Button>
+            </div>
+          ))}
+        </div>
+      </Modal>
+
+      <Modal open={showCreate} onClose={() => setShowCreate(false)} title="Create a Team">
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Team Name</label>
@@ -75,7 +128,7 @@ export default function TeamSwitcher() {
             />
           </div>
           <div className="flex justify-end gap-2 pt-2">
-            <Button variant="secondary" onClick={() => setShowModal(false)}>Cancel</Button>
+            <Button variant="secondary" onClick={() => setShowCreate(false)}>Cancel</Button>
             <Button onClick={handleCreate} loading={creating} disabled={!name.trim() || !displayName.trim()}>
               Create
             </Button>

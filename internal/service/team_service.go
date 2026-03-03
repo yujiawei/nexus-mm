@@ -63,3 +63,30 @@ func (s *TeamService) IsMember(ctx context.Context, teamID, userID string) (bool
 func (s *TeamService) SetRetention(ctx context.Context, teamID string, days int) error {
 	return s.store.SetRetention(ctx, teamID, days)
 }
+
+func (s *TeamService) ListAll(ctx context.Context) ([]*model.Team, error) {
+	return s.store.ListAll(ctx)
+}
+
+func (s *TeamService) AddMember(ctx context.Context, teamID, userID, role string) error {
+	now := time.Now().UTC()
+	member := &model.TeamMember{
+		TeamID:    teamID,
+		UserID:    userID,
+		Role:      role,
+		CreatedAt: now,
+	}
+	return s.store.AddMember(ctx, member)
+}
+
+func (s *TeamService) ListMembers(ctx context.Context, teamID string) ([]*model.TeamMember, error) {
+	return s.store.ListMembers(ctx, teamID)
+}
+
+func (s *TeamService) RemoveMember(ctx context.Context, teamID, userID string) error {
+	return s.store.RemoveMember(ctx, teamID, userID)
+}
+
+func (s *TeamService) GetMemberRole(ctx context.Context, teamID, userID string) (string, error) {
+	return s.store.GetMemberRole(ctx, teamID, userID)
+}

@@ -5,12 +5,16 @@ import * as channelsApi from '../api/channels';
 
 interface TeamState {
   teams: Team[];
+  allTeams: Team[];
   currentTeam: Team | null;
   channels: Channel[];
   categories: ChannelCategory[];
   currentChannel: Channel | null;
   loading: boolean;
   loadTeams: () => Promise<void>;
+  loadAllTeams: () => Promise<void>;
+  joinTeam: (teamId: string) => Promise<void>;
+  joinChannel: (channelId: string) => Promise<void>;
   selectTeam: (team: Team) => Promise<void>;
   selectChannel: (channel: Channel) => void;
   loadChannels: (teamId: string) => Promise<void>;
@@ -21,11 +25,37 @@ interface TeamState {
 
 export const useTeamStore = create<TeamState>((set, get) => ({
   teams: [],
+  allTeams: [],
   currentTeam: null,
   channels: [],
   categories: [],
   currentChannel: null,
   loading: false,
+
+  loadAllTeams: async () => {
+    try {
+      const allTeams = await teamsApi.listAllTeams();
+      set({ allTeams: allTeams || [] });
+    } catch {
+      set({ allTeams: [] });
+    }
+  },
+
+  joinTeam: async (teamId) => {
+    await teamsApi.joinTeam(teamId);
+    // Reload my teams.
+    const teams = await teamsApi.listTeams();
+    set({ teams: teams || [] });
+  },
+
+  joinChannel: async (channelId) => {
+    await channelsApi.joinChannel(channelId);
+    // Reload channels for current team.
+    const currentTeam = get().currentTeam;
+    if (currentTeam) {
+      await get().loadChannels(currentTeam.id);
+    }
+  },
 
   loadTeams: async () => {
     set({ loading: true });

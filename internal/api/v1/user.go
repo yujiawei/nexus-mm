@@ -58,3 +58,30 @@ func (h *UserHandler) Me(c *gin.Context) {
 
 	c.JSON(http.StatusOK, user)
 }
+
+func (h *UserHandler) UpdateRole(c *gin.Context) {
+	callerID := c.GetString("user_id")
+	targetID := c.Param("id")
+
+	// Only system admin can change roles.
+	caller, err := h.svc.GetByID(c.Request.Context(), callerID)
+	if err != nil || caller.Role != "admin" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "admin access required"})
+		return
+	}
+
+	var req struct {
+		Role string `json:"role" binding:"required,oneof=admin member"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := h.svc.UpdateRole(c.Request.Context(), targetID, req.Role); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": "ok"})
+}

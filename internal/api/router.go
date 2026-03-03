@@ -76,17 +76,29 @@ func SetupRouter(h *Handlers, jwtSecret string) *gin.Engine {
 	// Users.
 	auth.GET("/users/me", h.User.Me)
 
+	// Users (admin).
+	auth.PUT("/users/:id/role", h.User.UpdateRole)
+
 	// Teams.
 	auth.POST("/teams", h.Team.Create)
 	auth.GET("/teams", h.Team.List)
+	auth.GET("/teams/all", h.Team.ListAll)
 	auth.GET("/teams/:id", h.Team.Get)
 	auth.PUT("/teams/:id/retention", h.Team.SetRetention)
+	auth.POST("/teams/:id/join", h.Team.JoinTeam)
+	auth.POST("/teams/:id/members", h.Team.AddMember)
+	auth.GET("/teams/:id/members", h.Team.ListMembers)
+	auth.DELETE("/teams/:id/members/:user_id", h.Team.RemoveMember)
 
 	// Channels.
-	auth.POST("/teams/:team_id/channels", h.Channel.Create)
-	auth.GET("/teams/:team_id/channels", h.Channel.ListByTeam)
+	auth.POST("/teams/:id/channels", h.Channel.Create)
+	auth.GET("/teams/:id/channels", h.Channel.ListByTeam)
 	auth.GET("/channels/:id", h.Channel.Get)
 	auth.PUT("/channels/:id/retention", h.Channel.SetRetention)
+	auth.POST("/channels/:id/join", h.Channel.JoinChannel)
+	auth.POST("/channels/:id/members", h.Channel.AddMember)
+	auth.GET("/channels/:id/members", h.Channel.ListMembers)
+	auth.DELETE("/channels/:id/members/:user_id", h.Channel.RemoveMember)
 
 	// Messages.
 	auth.POST("/channels/:id/messages", h.Message.Send)
@@ -110,8 +122,8 @@ func SetupRouter(h *Handlers, jwtSecret string) *gin.Engine {
 	auth.GET("/teams/:id/commands", h.SlashCommand.List)
 
 	// Channel categories.
-	auth.POST("/teams/:team_id/categories", h.Category.Create)
-	auth.GET("/teams/:team_id/categories", h.Category.List)
+	auth.POST("/teams/:id/categories", h.Category.Create)
+	auth.GET("/teams/:id/categories", h.Category.List)
 	auth.PUT("/categories/:id", h.Category.Update)
 	auth.DELETE("/categories/:id", h.Category.Delete)
 	auth.POST("/categories/:id/channels", h.Category.AddEntry)

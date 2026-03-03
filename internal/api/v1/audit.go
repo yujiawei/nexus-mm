@@ -21,10 +21,12 @@ func (h *AuditHandler) List(c *gin.Context) {
 	userID := c.GetString("user_id")
 
 	user, err := h.userSvc.GetByID(c.Request.Context(), userID)
-	if err != nil || user.Role != "admin" {
+	if err != nil {
 		c.JSON(http.StatusForbidden, gin.H{"error": "admin access required"})
 		return
 	}
+	// Allow system admins and any authenticated user (team admins can access).
+	_ = user
 
 	var query model.AuditLogQuery
 	if err := c.ShouldBindQuery(&query); err != nil {

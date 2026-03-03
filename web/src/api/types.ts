@@ -126,6 +126,20 @@ export interface SlashCommand {
   updated_at: string;
 }
 
+export interface TeamMember {
+  team_id: string;
+  user_id: string;
+  role: string;
+  created_at: string;
+}
+
+export interface ChannelMember {
+  channel_id: string;
+  user_id: string;
+  role: string;
+  created_at: string;
+}
+
 export interface SearchResult {
   messages: Message[];
 }

@@ -39,6 +39,13 @@ func (s *UserService) Register(ctx context.Context, req *model.UserRegister) (*m
 		return nil, fmt.Errorf("hash password: %w", err)
 	}
 
+	// First registered user becomes system admin.
+	role := "member"
+	count, err := s.store.Count(ctx)
+	if err == nil && count == 0 {
+		role = "admin"
+	}
+
 	now := time.Now().UTC()
 	user := &model.User{
 		ID:           ulid.Make().String(),
@@ -46,7 +53,7 @@ func (s *UserService) Register(ctx context.Context, req *model.UserRegister) (*m
 		Email:        req.Email,
 		PasswordHash: string(hash),
 		Nickname:     req.Nickname,
-		Role:         "member",
+		Role:         role,
 		CreatedAt:    now,
 		UpdatedAt:    now,
 	}
@@ -85,6 +92,10 @@ func (s *UserService) Login(ctx context.Context, req *model.UserLogin) (*model.L
 
 func (s *UserService) GetByID(ctx context.Context, id string) (*model.User, error) {
 	return s.store.GetByID(ctx, id)
+}
+
+func (s *UserService) UpdateRole(ctx context.Context, userID, role string) error {
+	return s.store.UpdateRole(ctx, userID, role)
 }
 
 func (s *UserService) generateToken(userID string) (string, error) {
